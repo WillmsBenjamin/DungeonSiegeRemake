@@ -1,0 +1,13 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{E4838DEA-4960-B885-B363-AC8E9D80AA80}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "DungeonSiegeRemake",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
