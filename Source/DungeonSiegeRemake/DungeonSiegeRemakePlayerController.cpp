@@ -3,24 +3,23 @@
 #include "DungeonSiegeRemakePlayerController.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Runtime/Engine/Classes/Components/DecalComponent.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
 #include "DungeonSiegeRemakeCharacter.h"
-#include "Engine/World.h"
-
-namespace InputBindings
-{
-	const static FName GKSelect = "Select";
-}
+#include "Interaction/DSInteractable.h"
 
 ADungeonSiegeRemakePlayerController::ADungeonSiegeRemakePlayerController()
 {
 	bShowMouseCursor = true;
-	DefaultMouseCursor = EMouseCursor::Crosshairs;
+	DefaultMouseCursor = EMouseCursor::Default;
 }
 
 void ADungeonSiegeRemakePlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+	
+	GetHitResultUnderCursor(ECC_Visibility, false, CurrentMouseHitResult);
+	CurrentMouseHoverState = CalculateMouseHoverStatus(CurrentMouseHitResult);
+	
+	ProcessMouseHoverStateCursor(CurrentMouseHoverState, CurrentMouseHitResult);
 }
 
 void ADungeonSiegeRemakePlayerController::SetupInputComponent()
@@ -48,20 +47,70 @@ void ADungeonSiegeRemakePlayerController::SetNewMoveDestination(const FVector De
 
 void ADungeonSiegeRemakePlayerController::OnSelectPressed()
 {
-	// Trace to see what is under the mouse cursor
-	FHitResult Hit;
-	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-
-	ProcessMouseHit(Hit);
+	const auto Status = CalculateMouseHoverStatus(CurrentMouseHitResult);
+	ProcessMouseHoverStateActions(Status, CurrentMouseHitResult);
 }
 
-void ADungeonSiegeRemakePlayerController::ProcessMouseHit(const FHitResult& Hit)
+EMouseHoverState ADungeonSiegeRemakePlayerController::CalculateMouseHoverStatus(const FHitResult& Hit)
 {
 	if (!Hit.bBlockingHit)
 	{
-		return;
+		return EMouseHoverState::Invalid;
+	}
+
+	auto* Interactable = Cast<IDSInteractable>(Hit.GetActor());
+	if (Interactable != nullptr)
+	{
+		return (Interactable->IsInteractable()) ?
+			EMouseHoverState::Interactable :
+			EMouseHoverState::Invalid;
 	}
 	
-	// We hit something, move there
-	SetNewMoveDestination(Hit.ImpactPoint);
+	return EMouseHoverState::Environment;
+}
+
+void ADungeonSiegeRemakePlayerController::ProcessMouseHoverStateActions(const EMouseHoverState HoverState,
+	const FHitResult& Hit)
+{
+	switch (HoverState)
+	{
+		case EMouseHoverState::Environment:
+			{
+				SetNewMoveDestination(Hit.ImpactPoint);
+				break;
+			}
+		case EMouseHoverState::Interactable:
+			{
+				auto* Interactable = Cast<IDSInteractable>(Hit.GetActor());
+				Interactable->Interact(this);
+				break;
+			}
+		default:
+			{
+				break;
+			}
+	}
+}
+
+void ADungeonSiegeRemakePlayerController::ProcessMouseHoverStateCursor(const EMouseHoverState HoverState,
+	const FHitResult& Hit)
+{
+	switch (HoverState)
+	{
+	case EMouseHoverState::Environment:
+		{
+			CurrentMouseCursor = EMouseCursor::Default;
+			break;
+		}
+	case EMouseHoverState::Interactable:
+		{
+			CurrentMouseCursor = EMouseCursor::GrabHand;
+			break;
+		}
+	default:
+		{
+			CurrentMouseCursor = EMouseCursor::SlashedCircle;
+			break;
+		}
+	}
 }

@@ -6,6 +6,19 @@
 #include "GameFramework/PlayerController.h"
 #include "DungeonSiegeRemakePlayerController.generated.h"
 
+namespace InputBindings
+{
+	const static FName GKSelect = "Select";
+}
+
+UENUM()
+enum class EMouseHoverState: uint8
+{
+	Invalid,
+	Environment,
+	Interactable
+};
+
 UCLASS()
 class ADungeonSiegeRemakePlayerController : public APlayerController
 {
@@ -26,7 +39,18 @@ protected:
 	/** Input handlers for SetDestination action. */
 	void OnSelectPressed();
 
-	void ProcessMouseHit(const FHitResult& Hit);
+	static EMouseHoverState CalculateMouseHoverStatus(const FHitResult& Hit);
+
+	void ProcessMouseHoverStateActions(const EMouseHoverState HoverState, const FHitResult& Hit);
+	
+	void ProcessMouseHoverStateCursor(const EMouseHoverState HoverState, const FHitResult& Hit);
+	
+private:
+	UPROPERTY(Transient)
+	FHitResult CurrentMouseHitResult;
+
+	UPROPERTY(Transient)
+	EMouseHoverState CurrentMouseHoverState = EMouseHoverState::Invalid;
 };
 
 
